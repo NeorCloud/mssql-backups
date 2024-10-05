@@ -34,6 +34,23 @@ function Backup-Database {
     }
 }
 
+function Upload-ToS3 {
+    param (
+        [string]$FilePath,
+        [string]$BucketName,
+        [string]$S3Key
+    )
+    
+    try {
+        Write-Host "Uploading $FilePath to S3 bucket $BucketName with key $S3Key"
+        $command = "s3cmd put `"$FilePath`" s3://$BucketName/$S3Key"
+        Invoke-Expression $command
+        Write-Host "Upload completed for $FilePath"
+    } catch {
+        Write-Error "Failed to upload $FilePath to S3. Error: $_"
+    }
+}
+
 try {
     # Connect to the SQL Server instance
     $server = New-Object Microsoft.SqlServer.Management.Smo.Server $ServerInstance
@@ -49,6 +66,12 @@ try {
     foreach ($database in $databases) {
         $databaseName = $database.Name
         $backupFile = Backup-Database -ServerInstance $ServerInstance -DatabaseName $databaseName -BackupPath $BackupPath
+        
+        if ($backupFile) {
+            $s3Key = "$S3BackupFolder/$($databaseName)_$(Get-Date -Format 'yyyyMMddHHmmss').bak"
+            
+            Upload-ToS3 -FilePath $backupFile -BucketName $S3BucketName -S3Key $s3Key
+        }
     }
 } catch {
     Write-Error "An error occurred: $_"
