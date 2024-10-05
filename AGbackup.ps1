@@ -51,6 +51,7 @@ function Upload-ToS3 {
     }
 }
 
+# Main logic
 try {
     # Connect to the SQL Server instance
     $server = New-Object Microsoft.SqlServer.Management.Smo.Server $ServerInstance
@@ -71,6 +72,8 @@ try {
             $s3Key = "$S3BackupFolder/$($databaseName)_$(Get-Date -Format 'yyyyMMddHHmmss').bak"
             
             Upload-ToS3 -FilePath $backupFile -BucketName $S3BucketName -S3Key $s3Key
+
+            Remove-Item $backupFile
         }
     }
 } catch {
